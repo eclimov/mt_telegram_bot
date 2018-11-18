@@ -7,19 +7,13 @@ from telegram.ext import Updater, MessageHandler, Filters
 from telegram.ext import CommandHandler, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from eminia import config
+import config as config_global
 
-# emojis: https://apps.timwhitlock.info/emoji/tables/unicode
-emojis = {
-    'back': u'\U00002b05',
-    'top': u'\U000026A1',
-    'about': u'\U00002754',
-    'top_popular': u'\U00002B50',
-    'top_new': u'\U0001F34F',
-    'top_cheap': u'\U0001F4B8'
-}
-
+emojis = config_global.emojis
 
 # telegram examples: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Code-snippets
+
+# example of selling via Telegram https://tutorials.botsfloor.com/request-and-handle-phone-number-and-location-with-telegram-bot-api-e90004c0c87e
 
 ############################### Bot ############################################
 def start(bot, update):

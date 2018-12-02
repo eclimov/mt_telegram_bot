@@ -81,18 +81,15 @@ def day_offs_paid(bot, update):
     query = update.callback_query
 
     this_year_day_offs = {
-        "New Year's Day 1": '1/1/2018',
-        "New Year's Day 2": '2/1/2018',
-        "Orthodox Christmas Day": '8/1/2018',
-        "Maundy Friday": '30/3/2018',
-        "Easter Monday": '9/4/2018',
-        "Parents' Day": '16/4/2018',
-        "Labor Day": '1/5/2018',
-        "Whit Monday": '21/5/2018​',
-        "Independence Day": '27/08/2018',
-        "Long weekend": '2/11/2018​',
-        "Christmas": '25/12/2018​',
-        "New Year": '31/12/2018'
+        "New Year": '1/1/2019',
+        "New Year 2": '2/1/2019',
+        "Christmas (Old Style)": '7/1/2019',
+        "instead of 1.05.2019": '22/4/2019',
+        "Easter": '29/4/2019',
+        "Paştele Blajinilor": '6/5/2019',
+        "instead of 14.10.2019": '1/11/2019',
+        "instead of 8.03.2019": '23/12/2019',
+        "Christmas (New Style)": '25/12/2019'
     }
     text = '*Paid day-offs:*\n' + '\n'.join(
         [f'{holiday} - {this_year_day_offs[holiday]}' for holiday in this_year_day_offs]

@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../..")
+
 import datetime
 import json
 from json import JSONEncoder

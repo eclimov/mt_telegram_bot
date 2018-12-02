@@ -1,3 +1,4 @@
+import datetime
 import json
 from json import JSONEncoder
 
@@ -9,6 +10,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton,
     ReplyKeyboardRemove
 from mteam import config
 import config as config_global
+from mteam.src.utils import get_exchange_rate
 
 emojis = config_global.emojis
 
@@ -34,6 +36,8 @@ how to avoid auth frauds: https://groosha.gitbooks.io/telegram-bot-lessons/conte
 +
 Compare user_id from contact with chat_id of user, who sent this contact
 '''
+
+
 def authenticate(bot, update):
     contact = update.message.contact
     bot.send_message(
@@ -109,7 +113,21 @@ def salary(bot, update):
 
 def currency(bot, update):
     query = update.callback_query
-    bot.answer_callback_query(callback_query_id=query.id, text="0.00 -> 0.00", show_alert=True)
+
+    try:
+        today = datetime.datetime.today()
+        today_exchange_rate = get_exchange_rate(47, today)  # EUR
+        last_day_of_prev_month = today.replace(day=1) - datetime.timedelta(days=1)
+        prev_month_exchange_rate = get_exchange_rate(47, last_day_of_prev_month)  # EUR
+        text = f"{prev_month_exchange_rate} -> {today_exchange_rate}"
+    except ConnectionError as e:
+        text = "Could not connect to server. Try again later"
+    except IndexError as e:
+        text = "Error: unexpected API response. Please, contact responsible IT rep to fix this problem"
+    except Exception as e:
+        text = "Error. Please, contact responsible IT rep to fix this problem"
+
+    bot.answer_callback_query(callback_query_id=query.id, text=text, show_alert=True)
 
 
 def about_us(bot, update):
@@ -143,6 +161,7 @@ def day_offs_menu_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+
 def authenticate_keyboard():
     keyboard = [
         [KeyboardButton('Authenticate', request_contact=True, callback_data='authenticate')]
@@ -150,12 +169,15 @@ def authenticate_keyboard():
 
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
+
 ############################# Messages #########################################
 def main_menu_message():
     return 'Choose an option:'
 
+
 def start_message():
     return 'Authentication required'
+
 
 ############################# Handlers #########################################
 
@@ -167,7 +189,7 @@ if __name__ == '__main__':
     handlers = [
         MessageHandler(Filters.text, textMessage),
         CommandHandler('start', start),
-        #CallbackQueryHandler(authenticate, pattern='authenticate'),
+        # CallbackQueryHandler(authenticate, pattern='authenticate'),
         MessageHandler(Filters.contact, authenticate),
 
         CallbackQueryHandler(main_menu, pattern='main'),

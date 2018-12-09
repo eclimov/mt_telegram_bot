@@ -43,16 +43,19 @@ Compare user_id from contact with chat_id of user, who sent this contact
 
 def authenticate(bot, update):
     contact = update.message.contact
-    bot.send_message(
-        chat_id=update.message.chat.id,
-        text=f'Received Contact: {contact}',
-    )
-    bot.send_message(
-        chat_id=update.message.chat.id,
-        text=main_menu_message(),
-        reply_markup=main_menu_keyboard()
-    )
-    main_menu(bot, update)
+    if contact.user_id in config.registered_users:
+        bot.send_message(
+            chat_id=update.message.chat.id,
+            text=f'Received Contact: {contact}',
+        )
+        bot.send_message(
+            chat_id=update.message.chat.id,
+            text=main_menu_message(),
+            reply_markup=main_menu_keyboard()
+        )
+        main_menu(bot, update)
+    else:
+        print('Not authorized')
 
 
 def main_menu(bot, update):

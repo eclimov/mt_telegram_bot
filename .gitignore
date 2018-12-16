@@ -1,3 +1,3 @@
-eminia/config.py
-mteam/config.py
+env.py
 .idea
+database.db

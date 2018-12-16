@@ -1,4 +1,4 @@
-#!C:\Users\ksardas\PycharmProjects\telegram_bots\venv\Scripts\python.exe
+#!C:\Users\ksardas\PycharmProjects\mt_telegram_bot\venv\Scripts\python.exe
 # EASY-INSTALL-ENTRY-SCRIPT: 'future==0.17.1','console_scripts','futurize'
 __requires__ = 'future==0.17.1'
 import re

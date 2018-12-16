@@ -1,4 +1,4 @@
-#!C:\Users\ksardas\PycharmProjects\telegram_bots\venv\Scripts\python.exe
+#!C:\Users\ksardas\PycharmProjects\mt_telegram_bot\venv\Scripts\python.exe
 # See http://cens.ioc.ee/projects/f2py2e/
 from __future__ import division, print_function
 

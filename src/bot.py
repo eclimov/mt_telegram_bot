@@ -7,11 +7,23 @@ from src.database import Database
 
 from telegram.ext import Updater, MessageHandler, Filters, Handler
 from telegram.ext import CommandHandler, CallbackQueryHandler, DispatcherHandlerStop
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ChatAction
 import config as config_global
 import env
 from src.utils import get_exchange_rate
+from functools import wraps
 
+
+def send_typing_action(func):
+    """Sends typing action while processing func command."""
+
+    @wraps(func)
+    def command_func(instance, *args, **kwargs):  # instance = self
+        bot, update = args
+        bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
+        return func(instance, bot, update, **kwargs)
+
+    return command_func
 
 # telegram examples: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Code-snippets
 class Bot:
@@ -22,8 +34,8 @@ class Bot:
         handlers = self.get_handlers()
 
         # https://python-telegram-bot.readthedocs.io/en/stable/telegram.ext.dispatcher.html
-        self.__dispatcher.add_handler(MessageHandler(Filters.text, self.check_user_auth), -1)
-        self.__dispatcher.add_handler(CallbackQueryHandler(self.check_user_auth, pattern=''), -1)
+        self.__dispatcher.add_handler(MessageHandler(Filters.text, self.check_user_auth_handler), -1)
+        self.__dispatcher.add_handler(CallbackQueryHandler(self.check_user_auth_handler, pattern=''), -1)
         for handler in handlers:
             self.__dispatcher.add_handler(handler, 0)
 
@@ -52,7 +64,6 @@ class Bot:
         ).fetchall()
         return len(result) != 0
 
-
     def is_user_authenticated(self, user_id):
         result = self.__db.execute(
             """
@@ -65,7 +76,6 @@ class Bot:
             user_id
         ).fetchall()
         return len(result) != 0
-
 
     def is_contact_valid(self, phone_number, user_id):
         result = self.__db.execute(
@@ -81,7 +91,7 @@ class Bot:
         ).fetchall()
         return len(result) != 0
 
-    def check_user_auth(self, bot, update):
+    def check_user_auth_handler(self, bot, update):
         try:
             user_id = chat_id = update['callback_query']['message']['chat']['id']
         except Exception as e:
@@ -94,7 +104,6 @@ class Bot:
             )
             raise DispatcherHandlerStop
 
-
     def authenticate_keyboard(self):
         keyboard = [
             [KeyboardButton('Authenticate', request_contact=True, callback_data='authenticate')]
@@ -102,14 +111,14 @@ class Bot:
 
         return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
-    def start(self, bot, update):
+    @send_typing_action
+    def start_handler(self, bot, update):
         update.message.reply_text(
             'Authentication required',
             reply_markup=self.authenticate_keyboard()
         )
 
-
-    def main_menu(self, bot, update):
+    def main_menu_handler(self, bot, update):
         query = update.callback_query
         bot.edit_message_text(
             chat_id=query.message.chat_id,
@@ -132,8 +141,11 @@ class Bot:
     +
     Compare user_id from contact with chat_id of user, who sent this contact
     '''
-    def authenticate(self, bot, update):
+
+    @send_typing_action
+    def authenticate_handler(self, bot, update):
         contact = update.message.contact
+        chat_id = update.message.chat.id
         if self.is_phone_number_exists(contact.phone_number):
             if not self.is_user_registered(contact.phone_number):
                 self.__db.execute(
@@ -146,19 +158,20 @@ class Bot:
                     contact.phone_number
                 )
                 bot.send_message(
-                    chat_id=update.message.chat.id,
+                    chat_id=chat_id,
                     text='You have been registered'
                 )
             elif not self.is_contact_valid(contact.phone_number, contact.user_id):
                 bot.send_message(
-                    chat_id=update.message.chat.id,
+                    chat_id=chat_id,
                     text='Access denied'
                 )
                 raise DispatcherHandlerStop
             self.__db.execute(
                 """
                     UPDATE users
-                    SET when_authorized = datetime('now')
+                    SET 
+                        when_authorized = datetime('now')
                     WHERE 1=1
                         AND users.phone_number = ?
                         AND users.user_id = ?
@@ -167,23 +180,22 @@ class Bot:
                 contact.user_id
             )
             bot.send_message(
-                chat_id=update.message.chat.id,
+                chat_id=chat_id,
                 text=f'Received Contact: {contact}',
             )
             bot.send_message(
-                chat_id=update.message.chat.id,
+                chat_id=chat_id,
                 text=self.main_menu_message(),
                 reply_markup=self.main_menu_keyboard()
             )
-            self.main_menu(bot, update)
+            self.main_menu_handler(bot, update)
         else:
             bot.send_message(
                 chat_id=update.message.chat.id,
                 text='Access denied'
             )
 
-
-    def day_offs_menu(self, bot, update):
+    def day_offs_menu_handler(self, bot, update):
         query = update.callback_query
         bot.edit_message_text(
             chat_id=query.message.chat_id,
@@ -192,7 +204,7 @@ class Bot:
             reply_markup=self.day_offs_menu_keyboard()
         )
 
-    def day_offs_mine(self, bot, update):
+    def day_offs_mine_handler(self, bot, update):
         query = update.callback_query
 
         personal_day_offs_count = 0
@@ -200,7 +212,8 @@ class Bot:
 
         bot.answer_callback_query(callback_query_id=query.id, text=text, show_alert=True)
 
-    def day_offs_paid(self, bot, update):
+    @send_typing_action
+    def day_offs_paid_handler(self, bot, update):
         query = update.callback_query
 
         this_year_day_offs = {
@@ -224,11 +237,11 @@ class Bot:
             parse_mode='Markdown'
         )
 
-    def salary(self, bot, update):
+    def salary_handler(self, bot, update):
         query = update.callback_query
         bot.answer_callback_query(callback_query_id=query.id, text="0", show_alert=True)
 
-    def currency(self, bot, update):
+    def currency_handler(self, bot, update):
         query = update.callback_query
 
         try:
@@ -246,7 +259,8 @@ class Bot:
 
         bot.answer_callback_query(callback_query_id=query.id, text=text, show_alert=True)
 
-    def about_us(self, bot, update):
+    @send_typing_action
+    def about_us_handler(self, bot, update):
         bot.send_photo(
             chat_id=update.callback_query.message.chat_id,
             caption=self.get_about(),
@@ -256,7 +270,8 @@ class Bot:
     def main_menu_message(self):
         return 'Choose an option:'
 
-    def textMessage(self, bot, update):
+    @send_typing_action
+    def text_message_handler(self, bot, update):
         bot.send_message(chat_id=update.message.chat_id, text="Direct messaging doesn't work yet")
 
     def main_menu_keyboard(self):
@@ -278,18 +293,18 @@ class Bot:
 
     def get_handlers(self):
         return [
-            MessageHandler(Filters.text, self.textMessage),
-            CommandHandler('start', self.start),
+            MessageHandler(Filters.text, self.text_message_handler),
+            CommandHandler('start', self.start_handler),
             # CallbackQueryHandler(authenticate, pattern='authenticate'),
-            MessageHandler(Filters.contact, self.authenticate),
+            MessageHandler(Filters.contact, self.authenticate_handler),
 
-            CallbackQueryHandler(self.main_menu, pattern='main'),
-            CallbackQueryHandler(self.day_offs_menu, pattern='day_offs_menu'),
-            CallbackQueryHandler(self.day_offs_mine, pattern='day_offs_mine'),
-            CallbackQueryHandler(self.day_offs_paid, pattern='day_offs_paid'),
-            CallbackQueryHandler(self.salary, pattern='salary'),
-            CallbackQueryHandler(self.currency, pattern='currency'),
-            CallbackQueryHandler(self.about_us, pattern='about_us')
+            CallbackQueryHandler(self.main_menu_handler, pattern='main'),
+            CallbackQueryHandler(self.day_offs_menu_handler, pattern='day_offs_menu'),
+            CallbackQueryHandler(self.day_offs_mine_handler, pattern='day_offs_mine'),
+            CallbackQueryHandler(self.day_offs_paid_handler, pattern='day_offs_paid'),
+            CallbackQueryHandler(self.salary_handler, pattern='salary'),
+            CallbackQueryHandler(self.currency_handler, pattern='currency'),
+            CallbackQueryHandler(self.about_us_handler, pattern='about_us')
         ]
 
     def idle(self):

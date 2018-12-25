@@ -25,6 +25,16 @@ def send_typing_action(func):
 
     return command_func
 
+
+def build_menu(buttons, n_cols, header_buttons=None, footer_buttons=None):
+    menu = [buttons[i:i + n_cols] for i in range(0, len(buttons), n_cols)]
+    if header_buttons:
+        menu.insert(0, header_buttons)
+    if footer_buttons:
+        menu.append(footer_buttons)
+    return menu
+
+
 # telegram examples: https://github.com/python-telegram-bot/python-telegram-bot/wiki/Code-snippets
 class Bot:
     def __init__(self):
@@ -130,8 +140,11 @@ class Bot:
     def get_emoji(self, emoji):
         return config_global.emojis[emoji]
 
-    def get_about(self):
-        return env.about_info
+    def get_about_info(self):
+        return env.about['info']
+
+    def get_about_website(self):
+        return env.about['website']
 
     def get_api_keys(self):
         return env.api_keys
@@ -231,10 +244,12 @@ class Bot:
             [f'{holiday} - {this_year_day_offs[holiday]}' for holiday in this_year_day_offs]
         )
 
-        bot.send_message(
+        bot.edit_message_text(
             chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
             text=text,
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup(build_menu(buttons=[self.get_main_menu_button()], n_cols=1))
         )
 
     def salary_handler(self, bot, update):
@@ -263,8 +278,9 @@ class Bot:
     def about_us_handler(self, bot, update):
         bot.send_photo(
             chat_id=update.callback_query.message.chat_id,
-            caption=self.get_about(),
-            photo=open('../assets/logo.png', 'rb')
+            caption=self.get_about_info(),
+            photo=open('../assets/logo.png', 'rb'),
+            reply_markup=InlineKeyboardMarkup(build_menu(buttons=[self.get_website_link_button()], n_cols=1))
         )
 
     def main_menu_message(self):
@@ -276,20 +292,25 @@ class Bot:
 
     def main_menu_keyboard(self):
         keyboard = [
-            [InlineKeyboardButton(self.get_emoji('palm_tree') + ' Day-offs', callback_data='day_offs_menu')],
-            [InlineKeyboardButton(self.get_emoji('euro_banknote') + ' Salary', callback_data='salary')],
-            [InlineKeyboardButton(self.get_emoji('chart_upwards') + ' Currency', callback_data='currency')],
-            [InlineKeyboardButton(self.get_emoji('about') + ' About us', callback_data='about_us')],
+            InlineKeyboardButton(self.get_emoji('palm_tree') + ' Day-offs', callback_data='day_offs_menu'),
+            InlineKeyboardButton(self.get_emoji('euro_banknote') + ' Salary', callback_data='salary'),
+            InlineKeyboardButton(self.get_emoji('chart_upwards') + ' Currency', callback_data='currency'),
+            InlineKeyboardButton(self.get_emoji('about') + ' About us', callback_data='about_us'),
         ]
-        return InlineKeyboardMarkup(keyboard)
+        return InlineKeyboardMarkup(build_menu(buttons=keyboard, n_cols=1))
 
     def day_offs_menu_keyboard(self):
         keyboard = [
-            [InlineKeyboardButton(self.get_emoji('airplane') + ' My day-offs', callback_data='day_offs_mine')],
-            [InlineKeyboardButton(self.get_emoji('snowman') + ' Paid day-offs', callback_data='day_offs_paid')],
-            [InlineKeyboardButton(self.get_emoji('back') + ' Main menu', callback_data='main')],
+            InlineKeyboardButton(self.get_emoji('airplane') + ' My day-offs', callback_data='day_offs_mine'),
+            InlineKeyboardButton(self.get_emoji('snowman') + ' Paid day-offs', callback_data='day_offs_paid'),
         ]
-        return InlineKeyboardMarkup(keyboard)
+        return InlineKeyboardMarkup(build_menu(buttons=keyboard, footer_buttons=[self.get_main_menu_button()], n_cols=2))
+
+    def get_main_menu_button(self):
+        return InlineKeyboardButton(self.get_emoji('back') + ' Main menu', callback_data='main')
+
+    def get_website_link_button(self):
+        return InlineKeyboardButton('Website', url=self.get_about_website())
 
     def get_handlers(self):
         return [

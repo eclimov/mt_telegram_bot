@@ -17,7 +17,7 @@ class Database:
         sql_init_users = """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY ASC AUTOINCREMENT UNIQUE NOT NULL,
-                fist_name VARCHAR(40) NOT NULL,
+                first_name VARCHAR(40) NOT NULL,
                 last_name VARCHAR(40) NOT NULL,
                 phone_number VARCHAR(40) NOT NULL,
                 user_id INTEGER UNIQUE, 

@@ -26,5 +26,16 @@ class GoogleSpreadsheetReader:
     def get_all_records(self):
         return self.sheet.get_all_records()
 
+    def get_record_by_condition(self, key, value):
+        records = self.get_all_records()
+        for record in records:
+            if key in record:
+                if str(record[key]) == str(value):
+                    return record
+            else:
+                return None
+        return None
+
+
     def get_all_values(self):
         return self.sheet.get_all_values()

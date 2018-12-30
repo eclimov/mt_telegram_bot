@@ -39,7 +39,7 @@ def build_menu(buttons, n_cols, header_buttons=None, footer_buttons=None):
 class Bot:
     def __init__(self):
         self.__db = Database('database.db')
-        self.__updater = Updater(token=self.get_api_keys()['telegram_bot_token'])  # Токен API к Telegram
+        self.__updater = Updater(token=env.telegram_bot_token)  # Токен API к Telegram
         self.__dispatcher = self.__updater.dispatcher
         handlers = self.get_handlers()
 
@@ -146,9 +146,6 @@ class Bot:
     def get_about_website(self):
         return env.about['website']
 
-    def get_api_keys(self):
-        return env.api_keys
-
     '''
     how to avoid auth frauds: https://groosha.gitbooks.io/telegram-bot-lessons/content/chapter9.html
     +
@@ -229,17 +226,7 @@ class Bot:
     def day_offs_paid_handler(self, bot, update):
         query = update.callback_query
 
-        this_year_day_offs = {
-            "New Year": '1/1/2019',
-            "New Year 2": '2/1/2019',
-            "Christmas (Old Style)": '7/1/2019',
-            "instead of 1.05.2019": '22/4/2019',
-            "Easter": '29/4/2019',
-            "Paştele Blajinilor": '6/5/2019',
-            "instead of 14.10.2019": '1/11/2019',
-            "instead of 8.03.2019": '23/12/2019',
-            "Christmas (New Style)": '25/12/2019'
-        }
+        this_year_day_offs = env.paid_day_offs
         text = '*Paid day-offs:*\n' + '\n'.join(
             [f'{holiday} - {this_year_day_offs[holiday]}' for holiday in this_year_day_offs]
         )

@@ -1,0 +1,8 @@
+version: "3.1"
+services:
+    python:
+        build: .
+        container_name: mt_telegram_bot-python
+        working_dir: /application
+        volumes:
+            - .:/application/

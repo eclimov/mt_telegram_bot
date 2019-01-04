@@ -54,7 +54,11 @@ class Bot:
     def get_db_user(self, phone_number='', first_name='', last_name='', user_id=''):
         result = self.__db.execute(
             """
-                SELECT users.user_id
+                SELECT 
+                    users.user_id,
+                    users.phone_number,
+                    users.first_name,
+                    users.last_name
                 FROM users
                 WHERE 1=1
                     AND (
@@ -73,7 +77,10 @@ class Bot:
         if len(result):
             for row in result:
                 return {
-                    'user_id': row['user_id']
+                    'user_id': row['user_id'],
+                    'phone_number': row['phone_number'],
+                    'first_name': row['first_name'],
+                    'last_name': row['last_name']
                 }
 
         return None
@@ -96,7 +103,11 @@ class Bot:
             user_id = chat_id = update['callback_query']['message']['chat']['id']
         except Exception as e:
             user_id = chat_id = update['message']['chat']['id']
-        if not self.is_user_authenticated(user_id):
+        db_user = self.get_db_user(user_id=user_id)
+
+        spreadsheet_record = self.__gsheet.get_record_by_condition('Name', db_user['first_name'] + ' ' + db_user['last_name'])  # By name
+
+        if not self.is_user_authenticated(user_id) or self.get_db_user(phone_number=spreadsheet_record['Phone number']) is None:
             bot.send_message(
                 chat_id=chat_id,
                 text='Authentication required',
@@ -217,11 +228,15 @@ class Bot:
         )
 
     def day_offs_mine_handler(self, bot, update):
+        db_user = self.get_db_user(user_id=update.callback_query.message.chat_id)
+        spreadsheet_record = self.__gsheet.get_record_by_condition(
+            'Phone number',
+            db_user['phone_number']
+        )
+
+        text = f'You have {spreadsheet_record["Day-offs"]} day-offs left'
+
         query = update.callback_query
-
-        personal_day_offs_count = 0
-        text = f'You have {personal_day_offs_count} day-offs left'
-
         bot.answer_callback_query(callback_query_id=query.id, text=text, show_alert=True)
 
     @send_typing_action
@@ -241,9 +256,28 @@ class Bot:
             reply_markup=InlineKeyboardMarkup(build_menu(buttons=[self.get_main_menu_button()], n_cols=1))
         )
 
-    def salary_handler(self, bot, update):
+    @send_typing_action
+    def help_handler(self, bot, update):
         query = update.callback_query
-        bot.answer_callback_query(callback_query_id=query.id, text="0", show_alert=True)
+        text = env.help_text
+        bot.edit_message_text(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+            text=text,
+            parse_mode='Markdown',
+            reply_markup=InlineKeyboardMarkup(build_menu(buttons=[self.get_main_menu_button()], n_cols=1))
+        )
+
+
+    def salary_handler(self, bot, update):
+        db_user = self.get_db_user(user_id=update.callback_query.message.chat_id)
+        spreadsheet_record = self.__gsheet.get_record_by_condition(
+            'Phone number',
+            db_user['phone_number']
+        )
+
+        query = update.callback_query
+        bot.answer_callback_query(callback_query_id=query.id, text=spreadsheet_record['Salary'], show_alert=True)
 
     def currency_handler(self, bot, update):
         query = update.callback_query
@@ -280,13 +314,17 @@ class Bot:
         bot.send_message(chat_id=update.message.chat_id, text="Direct messaging doesn't work yet")
 
     def main_menu_keyboard(self):
-        keyboard = [
+        header_buttons = [
             InlineKeyboardButton(self.get_emoji('palm_tree') + ' Day-offs', callback_data='day_offs_menu'),
+        ]
+
+        keyboard = [
             InlineKeyboardButton(self.get_emoji('euro_banknote') + ' Salary', callback_data='salary'),
             InlineKeyboardButton(self.get_emoji('chart_upwards') + ' Currency', callback_data='currency'),
             InlineKeyboardButton(self.get_emoji('about') + ' About us', callback_data='about_us'),
+            InlineKeyboardButton(self.get_emoji('raised_hand') + ' Help', callback_data='help'),
         ]
-        return InlineKeyboardMarkup(build_menu(buttons=keyboard, n_cols=1))
+        return InlineKeyboardMarkup(build_menu(buttons=keyboard, header_buttons=header_buttons, n_cols=2))
 
     def day_offs_menu_keyboard(self):
         keyboard = [
@@ -314,7 +352,8 @@ class Bot:
             CallbackQueryHandler(self.day_offs_paid_handler, pattern='day_offs_paid'),
             CallbackQueryHandler(self.salary_handler, pattern='salary'),
             CallbackQueryHandler(self.currency_handler, pattern='currency'),
-            CallbackQueryHandler(self.about_us_handler, pattern='about_us')
+            CallbackQueryHandler(self.about_us_handler, pattern='about_us'),
+            CallbackQueryHandler(self.help_handler, pattern='help'),
         ]
 
     def idle(self):

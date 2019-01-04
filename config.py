@@ -10,5 +10,6 @@ emojis = {
     'euro_banknote': u'\U0001F4B6',
     'palm_tree': u'\U0001F334',
     'airplane': u'\U00002708',
-    'snowman': u'\U000026C4'
+    'snowman': u'\U000026C4',
+    'raised_hand': u'\U0000270B'
 }

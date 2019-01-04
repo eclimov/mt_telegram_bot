@@ -103,11 +103,14 @@ class Bot:
             user_id = chat_id = update['callback_query']['message']['chat']['id']
         except Exception as e:
             user_id = chat_id = update['message']['chat']['id']
+
         db_user = self.get_db_user(user_id=user_id)
+        user_is_authenticated = False if db_user is None else self.is_user_authenticated(user_id)
 
-        spreadsheet_record = self.__gsheet.get_record_by_condition('Name', db_user['first_name'] + ' ' + db_user['last_name'])  # By name
+        if db_user is not None:
+            spreadsheet_record = self.__gsheet.get_record_by_condition('Name', db_user['first_name'] + ' ' + db_user['last_name'])  # By name
 
-        if not self.is_user_authenticated(user_id) or self.get_db_user(phone_number=spreadsheet_record['Phone number']) is None:
+        if not user_is_authenticated or self.get_db_user(phone_number=spreadsheet_record['Phone number']) is None:
             bot.send_message(
                 chat_id=chat_id,
                 text='Authentication required',

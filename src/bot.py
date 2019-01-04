@@ -1,7 +1,7 @@
 import datetime
 import sys
 
-sys.path.append("../..")
+sys.path.append("../")
 
 from src.google_spreadsheet import GoogleSpreadsheetReader
 from src.database import Database

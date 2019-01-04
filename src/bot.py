@@ -302,7 +302,7 @@ class Bot:
         bot.send_photo(
             chat_id=update.callback_query.message.chat_id,
             caption=self.get_about_info(),
-            photo=open('../assets/logo.png', 'rb'),
+            photo=open('assets/logo.png', 'rb'),
             reply_markup=InlineKeyboardMarkup(build_menu(buttons=[self.get_website_link_button()], n_cols=1))
         )
 

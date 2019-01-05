@@ -7,31 +7,42 @@ import env
 
 class GoogleSpreadsheetReader:
     # use creds to create a client to interact with the Google Drive API
-    __scope = [
+    SCOPES = [
         'https://spreadsheets.google.com/feeds',
         'https://www.googleapis.com/auth/drive'
     ]
+    SHEET_URL = env.google_spreadsheet_url
 
     def __init__(self):
-        self.__creds = ServiceAccountCredentials.from_json_keyfile_dict(
-            env.google_spreadsheet_keyfile_dict,
-            self.__scope
-        )
+        self._gc = None
+        self._credentials = None
 
-    def _refresh_client(self):
-        self.__client = gspread.authorize(self.__creds)
+    @property
+    def credentials(self):
+        if self._credentials is None:
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(
+                env.google_spreadsheet_keyfile_dict,
+                self.SCOPES
+            )
+            self._credentials = creds
+        return self._credentials
 
-        # Find a workbook by name and open the first sheet
-        # Make sure you use the right name here.
-        self.sheet = self.__client.open(env.google_spreadsheet_name).sheet1
+    @property
+    def gc(self):
+        if self._gc is None:
+            self._gc = gspread.authorize(self.credentials)
+        return self._gc
 
+    @property
+    def sheet(self):
+        if self.credentials.access_token_expired:
+            self.gc.login()
+        return self.gc.open_by_url(self.SHEET_URL).sheet1
 
     def get_all_records(self):
-        self._refresh_client()
         return self.sheet.get_all_records()
 
     def get_record_by_condition(self, key, value):
-        self._refresh_client()
         records = self.get_all_records()
         for record in records:
             if key in record:
@@ -41,7 +52,5 @@ class GoogleSpreadsheetReader:
                 return None
         return None
 
-
     def get_all_values(self):
-        self._refresh_client()
         return self.sheet.get_all_values()

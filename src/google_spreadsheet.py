@@ -17,16 +17,21 @@ class GoogleSpreadsheetReader:
             env.google_spreadsheet_keyfile_dict,
             self.__scope
         )
+
+    def _refresh_client(self):
         self.__client = gspread.authorize(self.__creds)
 
         # Find a workbook by name and open the first sheet
         # Make sure you use the right name here.
         self.sheet = self.__client.open(env.google_spreadsheet_name).sheet1
 
+
     def get_all_records(self):
+        self._refresh_client()
         return self.sheet.get_all_records()
 
     def get_record_by_condition(self, key, value):
+        self._refresh_client()
         records = self.get_all_records()
         for record in records:
             if key in record:
@@ -38,4 +43,5 @@ class GoogleSpreadsheetReader:
 
 
     def get_all_values(self):
+        self._refresh_client()
         return self.sheet.get_all_values()

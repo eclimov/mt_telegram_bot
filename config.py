@@ -12,5 +12,4 @@ emojis = {
     'airplane': u'\U00002708',
     'snowman': u'\U000026C4',
     'raised_hand': u'\U0000270B'
-    ,'test': 'test'
 }

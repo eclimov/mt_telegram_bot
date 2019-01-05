@@ -1,8 +1,20 @@
 version: 2
 jobs:
   build:
+    working_directory: /dockerapp
+    docker:
+      - image: docker:18.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --no-cache py-pip=9.0.1-r1
+            pip install docker-compose==1.19.0
       - deploy:
           name: Deploy application to Digital Ocean
           #Use 'docker-compose logs -f -t' to attach yourself to the logs of all running services
           command: |
-            ssh -o "StrictHostKeyChecking no" $DEPLOY_USER@$DEPLOY_HOST "cd /opt/mt_telegram_bot && git reset --hard && git pull && docker-compose -f docker-compose.yml up -d --build --force-recreate"
+            ssh -o "StrictHostKeyChecking no" $DEPLOY_USER@$DEPLOY_HOST "cd opt/mt_telegram_bot && git reset --hard && git pull && docker-compose -f docker-compose.yml up -d --build --force-recreate && docker container prune -f && docker image prune -f && docker network prune -f && docker volume prune -f"

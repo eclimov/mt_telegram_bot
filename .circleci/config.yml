@@ -1,0 +1,8 @@
+version: 2
+jobs:
+  build:
+      - deploy:
+          name: Deploy application to Digital Ocean
+          #Use 'docker-compose logs -f -t' to attach yourself to the logs of all running services
+          command: |
+            ssh -o "StrictHostKeyChecking no" $DEPLOY_USER@$DEPLOY_HOST "cd /opt/mt_telegram_bot && git reset --hard && git pull && docker-compose -f docker-compose.yml up -d --build --force-recreate"

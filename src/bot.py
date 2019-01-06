@@ -9,6 +9,7 @@ from src.database import Database
 from telegram.ext import Updater, MessageHandler, Filters, Handler
 from telegram.ext import CommandHandler, CallbackQueryHandler, DispatcherHandlerStop
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, ChatAction
+from telegram.error import (TelegramError, Unauthorized, BadRequest, TimedOut, ChatMigrated, NetworkError)
 import config as config_global
 import env
 from src.utils import get_exchange_rate
@@ -45,11 +46,64 @@ class Bot:
         self.__gsheet = GoogleSpreadsheetReader()
         handlers = self.get_handlers()
 
+        self.__dispatcher.add_handler(CommandHandler('start', self.logger), -2)
+        self.__dispatcher.add_handler(MessageHandler(Filters.text, self.logger), -2)
+        self.__dispatcher.add_handler(CallbackQueryHandler(self.logger, pattern=''), -2)
+
         # https://python-telegram-bot.readthedocs.io/en/stable/telegram.ext.dispatcher.html
         self.__dispatcher.add_handler(MessageHandler(Filters.text, self.check_user_auth_handler), -1)
         self.__dispatcher.add_handler(CallbackQueryHandler(self.check_user_auth_handler, pattern=''), -1)
+
+        self.__dispatcher.add_error_handler(self.error_handler)
         for handler in handlers:
             self.__dispatcher.add_handler(handler, 0)
+
+    def logger(self, bot, update):
+        user_id = self.get_chat_id_by_update(update)
+        message = self.get_message_by_update(update)
+        callback = self.get_callback_by_update(update)
+        now = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)  # UTC + 2
+        self.__db.execute(
+            """
+                INSERT INTO activity_log(user_id, callback, message, when_created)
+                VALUES(?, ?, ?, ?)
+            """,
+            user_id,
+            callback,
+            message,
+            now.strftime('%Y-%m-%d %H:%M:%S')
+        )
+
+
+    def error_handler(self, bot, update, error):
+        chat_id = self.get_chat_id_by_update(update)
+        error_message = 'error: '
+        try:
+            raise error
+        except Unauthorized:
+            # remove update.message.chat_id from conversation list
+            error_message += 'Unauthorized'
+        except BadRequest:
+            # handle malformed requests - read more below!
+            error_message += 'BadRequest'
+        except TimedOut:
+            # handle slow connection problems
+            error_message += 'TimedOut'
+        except NetworkError:
+            # handle other connection problems
+            error_message += 'NetworkError'
+        except ChatMigrated as e:
+            # the chat_id of a group has changed, use e.new_chat_id instead
+            error_message += str(e)
+        except TelegramError:
+            # handle all other telegram related errors
+            error_message += 'TelegramError'
+
+        bot.send_message(
+            chat_id=chat_id,
+            text=error_message
+        )
+
 
     def get_db_user(self, phone_number='', first_name='', last_name='', user_id=''):
         result = self.__db.execute(
@@ -88,7 +142,7 @@ class Bot:
     def is_user_authenticated(self, user_id):
         result = self.__db.execute(
             """
-                SELECT users.id
+                SELECT users.user_id
                 FROM users
                 WHERE 1=1
                     AND users.user_id = ?
@@ -98,11 +152,32 @@ class Bot:
         ).fetchall()
         return len(result) != 0
 
-    def check_user_auth_handler(self, bot, update):
+    def get_message_by_update(self, update):
         try:
-            user_id = chat_id = update['callback_query']['message']['chat']['id']
+            message = update['message']['text']
         except Exception as e:
-            user_id = chat_id = update['message']['chat']['id']
+            message = ''
+
+        return message
+
+    def get_callback_by_update(self, update):
+        try:
+            callback = update['callback_query']['data']
+        except Exception as e:
+            callback = ''
+
+        return callback
+
+    def get_chat_id_by_update(self, update):
+        try:
+            chat_id = update['callback_query']['message']['chat']['id']
+        except Exception as e:
+            chat_id = update['message']['chat']['id']
+
+        return chat_id
+
+    def check_user_auth_handler(self, bot, update):
+        user_id = chat_id = self.get_chat_id_by_update(update)
 
         db_user = self.get_db_user(user_id=user_id)
         user_is_authenticated = False if db_user is None else self.is_user_authenticated(user_id)

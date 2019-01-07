@@ -47,7 +47,7 @@ class Bot:
         handlers = self.get_handlers()
 
         self.__dispatcher.add_handler(CommandHandler('start', self.logger), -2)
-        self.__dispatcher.add_handler(MessageHandler(Filters.text, self.logger), -2)
+        self.__dispatcher.add_handler(MessageHandler(Filters.all, self.logger), -2)
         self.__dispatcher.add_handler(CallbackQueryHandler(self.logger, pattern=''), -2)
 
         # https://python-telegram-bot.readthedocs.io/en/stable/telegram.ext.dispatcher.html
@@ -65,12 +65,13 @@ class Bot:
         now = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=2)  # UTC + 2
         self.__db.execute(
             """
-                INSERT INTO activity_log(user_id, callback, message, when_created)
-                VALUES(?, ?, ?, ?)
+                INSERT INTO activity_log(user_id, callback, message, update_query, when_created)
+                VALUES(?, ?, ?, ?, ?)
             """,
             user_id,
             callback,
             message,
+            str(update),
             now.strftime('%Y-%m-%d %H:%M:%S')
         )
 
@@ -250,7 +251,14 @@ class Bot:
         # Change phone number how-to: https://telegram.org/blog/telegram-me-change-number-and-pfs
 
         spreadsheet_record_full_name = str(spreadsheet_record['Name']).strip()
-        spreadsheet_record_first_name, spreadsheet_record_last_name = spreadsheet_record_full_name.split()
+        try:
+            spreadsheet_record_first_name, spreadsheet_record_last_name = spreadsheet_record_full_name.split()
+        except ValueError:
+            bot.send_message(
+                chat_id=chat_id,
+                text=f'Invalid name format. Expected <Name Surname>, got <{spreadsheet_record_full_name}>'
+            )
+            raise DispatcherHandlerStop
         spreadsheet_record_phone_number = str(spreadsheet_record['Phone number']).strip()
 
         if spreadsheet_record_phone_number == contact.phone_number:

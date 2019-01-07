@@ -31,6 +31,7 @@ class Database:
                 user_id INTEGER NOT NULL DEFAULT 0,
                 callback VARCHAR(40),
                 message TEXT,
+                update_query TEXT,
                 when_created DATETIME NOT NULL
             );
         """

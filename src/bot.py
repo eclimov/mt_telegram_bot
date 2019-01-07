@@ -290,10 +290,12 @@ class Bot:
                 chat_id
             )
 
+            '''
             bot.send_message(
                 chat_id=chat_id,
                 text=f'Received Contact: {contact}',
             )
+            '''
             bot.send_message(
                 chat_id=chat_id,
                 text=self.main_menu_message(),

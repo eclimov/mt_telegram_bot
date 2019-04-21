@@ -12,9 +12,10 @@ ENV PYTHONPATH "${PYTHONPATH}:/application"
 #RUN pip3 install cffi --upgrade
 #RUN apt-get update
 #RUN apk update
-RUN apk add -U --no-cache gcc build-base linux-headers ca-certificates python3-dev libffi-dev libressl-dev libxml2-dev libxslt-dev build-dep -y lxml \
+RUN apk add -U --no-cache gcc build-base linux-headers ca-certificates python3-dev libffi-dev libressl-dev libxslt-dev \
     && pip install python-telegram-bot --upgrade \
     && pip install gspread \
+    && pip install lxml \
     && pip install requests \
     && pip install bs4 \
     && pip install beautifulsoup4 \
